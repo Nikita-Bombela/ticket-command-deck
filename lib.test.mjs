@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTranscript, buildDeck } from './lib.mjs';
+import { parseTranscript, buildDeck, nonEpicParents } from './lib.mjs';
 
 const line = (o) => JSON.stringify(o) + '\n';
 const base = { sessionId: 's', cwd: '/w/repo', timestamp: '2026-01-01T00:00:00.000Z' };
@@ -30,4 +30,19 @@ test('PR attaches via prUrls when branch and title lack the key', () => {
   const pr = { url: 'https://github.com/o/r/pull/9', branch: 'misc', title: 'misc' };
   const deck = buildDeck([issue('PROJ-5')], [pr, { url: 'u2', branch: 'b', title: 't' }], [s], 'https://j');
   assert.deepEqual(deck.tickets[0].prs, [pr]);
+});
+
+test('a ticket takes its epic from its parent, and a sub-task from its parent story', () => {
+  const epicParent = { key: 'PROJ-1', fields: { summary: 'Epic one', issuetype: { name: 'Epic' } } };
+  const storyParent = { key: 'PROJ-2', fields: { summary: 'Story two', issuetype: { name: 'Story' } } };
+  const mk = (key, parent, type = 'Story') => ({ key, fields: { summary: key, status: { name: 'S', statusCategory: { key: 'new' } }, issuetype: { name: type }, parent } });
+  const issues = [mk('PROJ-10', epicParent), mk('PROJ-11', storyParent, 'Sub-task'), mk('PROJ-12'), mk('PROJ-1', undefined, 'Epic')];
+  assert.deepEqual(nonEpicParents(issues), ['PROJ-2']);
+  const [child, sub, loose, epic] = buildDeck(issues, [], [], 'https://j', { 'PROJ-2': { key: 'PROJ-1', title: 'Epic one' } }).tickets;
+  assert.deepEqual(child.epic, { key: 'PROJ-1', title: 'Epic one', url: 'https://j/browse/PROJ-1' });
+  assert.equal(child.parent, null);
+  assert.equal(sub.epic.key, 'PROJ-1');
+  assert.equal(sub.parent.key, 'PROJ-2');
+  assert.equal(loose.epic, null);
+  assert.equal(epic.isEpic, true);
 });

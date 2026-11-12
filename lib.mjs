@@ -31,16 +31,25 @@ export function parseTranscript(text, id) {
   };
 }
 
-export function buildDeck(issues, prs, sessions, jiraBase) {
+const isEpicType = (it) => (it?.hierarchyLevel ?? (it?.name === 'Epic' ? 1 : 0)) === 1;
+export const nonEpicParents = (issues) =>
+  [...new Set(issues.map((i) => i.fields.parent).filter((p) => p && !isEpicType(p.fields?.issuetype)).map((p) => p.key))];
+
+export function buildDeck(issues, prs, sessions, jiraBase, parentEpics = {}) {
+  const link = (key, title) => ({ key, title, url: `${jiraBase}/browse/${key}` });
   const tickets = issues.map((i) => {
     const mine = sessions.filter((s) => s.keys.includes(i.key)).sort((a, b) => (b.lastActive ?? '').localeCompare(a.lastActive ?? ''));
     const urls = new Set(mine.flatMap((s) => s.prUrls));
+    const p = i.fields.parent, direct = p && isEpicType(p.fields?.issuetype), viaParent = p && parentEpics[p.key];
     return {
       key: i.key,
       summary: i.fields.summary,
       status: i.fields.status.name,
       statusCategory: i.fields.status.statusCategory.key,
       type: i.fields.issuetype.name,
+      isEpic: isEpicType(i.fields.issuetype),
+      epic: direct ? link(p.key, p.fields.summary) : viaParent ? link(viaParent.key, viaParent.title) : null,
+      parent: p && !direct ? link(p.key, p.fields?.summary ?? p.key) : null,
       url: `${jiraBase}/browse/${i.key}`,
       prs: prs.filter((p) => urls.has(p.url) || keysIn(p.branch).has(i.key) || keysIn(p.title).has(i.key)),
       sessions: mine,

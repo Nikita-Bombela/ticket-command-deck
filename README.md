@@ -10,9 +10,9 @@ Everything runs on your machine. The deck reads your Jira tickets, your GitHub p
 - Node.js 22 or later
 - [Claude Code](https://claude.com/claude-code)
 - [GitHub CLI](https://cli.github.com), logged in with `gh auth login`
-- [WezTerm](https://wezterm.org), with `wezterm` on your `PATH`. WezTerm is the only supported terminal for now.
+- Optional: [WezTerm](https://wezterm.org), to open sessions in a terminal. WezTerm is the only supported terminal for now.
 - A Jira Cloud API token
-- Optional: the Claude desktop app. Without it, set **Open in** to **Terminal**.
+- Optional: the Claude desktop app, to open sessions in the app. Without it, set **Open in** to **Terminal**.
 
 ## Set up
 
@@ -72,9 +72,30 @@ Sessions started with the **Start session** button are linked automatically in t
 - **Pull requests.** Your pull requests whose branch or title contains the ticket key, and pull requests created by a linked session. Each one shows the state. An open pull request also shows its reviews, its unresolved review comments, and its checks.
 - **Sessions.** The title, branch, folder, and last activity of each session. A green dot marks a session that is running now.
 
+## Jira boards
+
+By default, the deck shows every open ticket assigned to you. To see one board only, load the board and select it.
+
+1. Select the board picker next to the page title.
+2. Type part of the board name or the project key, or paste a link to the board.
+3. Select the board in the results.
+
+The deck then shows only your open tickets on that board. For a board with sprints, it shows the tickets in the active sprint, with the sprint name and the days left. If a pasted link contains quick filters, the deck applies them. To return to every ticket, select **All my tickets** in the picker.
+
+Loaded boards are saved in your browser. On the **Settings** page you can remove a board, or mark one with **Open first** so that the deck starts on it.
+
+## Epics
+
+The deck groups tickets under their Jira epic. Each epic has a header with its title, a link to the epic, and the number of your tickets in it.
+
+- To close or open an epic, select its header. The page remembers which epics are closed.
+- A sub-task is listed under the epic of its parent ticket.
+- Tickets without an epic are listed last, under **Other tickets**.
+- To turn grouping off, set **Group by** in the header to **None**. Each ticket then shows the title of its epic, and tickets are split into in progress and to do.
+
 ## Controls
 
-The header has two settings. The page remembers both.
+The header has two session settings. The page remembers both.
 
 | Setting | Effect |
 |---|---|
@@ -86,19 +107,37 @@ Each row has one main button.
 | Control | Action |
 |---|---|
 | **Start session** | Starts a session for the ticket in the place set by **Open in**. |
-| Repo name on a ticket | The folder for that ticket's new session. It is the folder of the ticket's last session, or else the default repo. Select another folder to override it for that ticket. |
+| Repo name on a ticket | The folder for that ticket's new session. Select another folder to override it for that ticket. |
 | **Resume** | Opens the session in the place set by **Open in**. |
 | Three-dot menu | **Copy resume command** copies the terminal command. The second item opens the session in the other place. |
-| **Rows** and **Board** | Switch between a table of tickets and a board with one column for each Jira status. |
 | **Refresh** | Reloads all data. Pull requests are otherwise cached for 2 minutes. |
 
 Do not open one session in WezTerm and in the desktop app at the same time.
 
+## Settings
+
+Select **Settings** in the header. Settings are saved in your browser.
+
+| Setting | Effect |
+|---|---|
+| **Theme** | **Default**, **Cyberpunk**, **Nord**, or **Everforest**. |
+| **Light or dark** | For the Default theme: light, dark, or the same as your computer. |
+| **Layout** | **Table** shows one table of tickets. **Columns** shows one column for each Jira status. |
+| **Jira boards** | Load, remove, and order boards. |
+| **Open sessions in** | The same setting as **Open in** in the header. |
+| **Default repo** | The same setting as in the header. |
+| **Reuse a ticket's last repo** | When on, a ticket that has sessions starts new ones in the folder of its latest session. |
+
+## Without WezTerm
+
+If the deck cannot find WezTerm, sessions open in the Claude desktop app and the **Terminal** option is unavailable. **Copy resume command** still works. If WezTerm is installed in an unusual place, start the deck with `WEZTERM_BIN=/path/to/wezterm node server.mjs`.
+
 ## Limits
 
 - The folder list for new sessions contains only folders where you have already run Claude Code.
-- The deck currently opens sessions in WezTerm only. A setting to choose your own terminal is planned. Until then, you can change the `terminal` function in `server.mjs`.
+- The only terminal the deck can open is WezTerm. A setting to choose your own terminal is planned. Until then, you can change the `terminal` function in `server.mjs`.
 - The deck reads at most 100 tickets and your 100 most recently updated pull requests.
+- The deck lists only tickets that are assigned to you and not done, also on a board.
 
 ## Security
 
