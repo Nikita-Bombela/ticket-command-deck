@@ -6,11 +6,11 @@ Everything runs on your machine. The deck reads your Jira tickets, your GitHub p
 
 ## Requirements
 
-- macOS
+- macOS. Other operating systems are not supported.
 - Node.js 22 or later
 - [Claude Code](https://claude.com/claude-code)
 - [GitHub CLI](https://cli.github.com), logged in with `gh auth login`
-- [WezTerm](https://wezterm.org), with `wezterm` on your `PATH`
+- [WezTerm](https://wezterm.org), with `wezterm` on your `PATH`. WezTerm is the only supported terminal for now.
 - A Jira Cloud API token
 - Optional: the Claude desktop app, for the **App** and **New in app** buttons
 
@@ -88,7 +88,7 @@ Do not open one session in WezTerm and in the desktop app at the same time.
 ## Limits
 
 - The folder list for new sessions contains only folders where you have already run Claude Code.
-- The terminal is WezTerm. To use another terminal, change the `terminal` function in `server.mjs`.
+- The deck currently opens sessions in WezTerm only. A setting to choose your own terminal is planned. Until then, you can change the `terminal` function in `server.mjs`.
 - The deck reads at most 100 tickets and your 100 most recently updated pull requests.
 
 ## Security
@@ -101,3 +101,7 @@ Do not open one session in WezTerm and in the desktop app at the same time.
 ```sh
 node --test
 ```
+
+## License
+
+[MIT](LICENSE)
