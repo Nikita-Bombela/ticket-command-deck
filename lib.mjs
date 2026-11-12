@@ -58,6 +58,7 @@ export function normalizePr(n) {
     isDraft: n.isDraft, reviewDecision: n.reviewDecision,
     reviews: { approved: r('APPROVED'), changesRequested: r('CHANGES_REQUESTED'), commented: r('COMMENTED') },
     reviewRequests: n.reviewRequests.totalCount,
+    unresolved: n.reviewThreads.nodes.filter((t) => !t.isResolved).length,
     checks: n.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null,
     branch: n.headRefName,
   };

@@ -1,48 +1,94 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ticket Command Deck</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--fg:#1c2128;--mut:#667085;--bd:#dfe3e8;--acc:#2563eb;--ok:#15803d;--bad:#b91c1c;--warn:#b45309}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1317;--card:#171c22;--fg:#e6e9ee;--mut:#8b95a3;--bd:#2a313a;--acc:#6ea0ff;--ok:#4ade80;--bad:#f87171;--warn:#fbbf24}}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
-main{max-width:1100px;margin:0 auto;padding:16px}
-header{display:flex;align-items:center;gap:12px}h1{font-size:20px;margin:0;flex:1}
-h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:24px 0 8px}
-a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
-button,select,a.btn{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:3px 9px;cursor:pointer}
-button:hover,a.btn:hover{border-color:var(--acc);text-decoration:none}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:8px}
-.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.key{font-weight:600}.mut{color:var(--mut)}.sum{flex:1;min-width:200px}
-.pill{border:1px solid var(--bd);border-radius:99px;padding:0 8px;font-size:12px;white-space:nowrap}
-.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
-.ses{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--bd);font-size:13px}
-.ses .t{flex:1;min-width:180px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
-.banner{background:color-mix(in srgb,var(--bad) 15%,transparent);border:1px solid var(--bad);border-radius:8px;padding:8px 12px;margin:12px 0}
-details summary{cursor:pointer;color:var(--mut)}
+:root{color-scheme:light;--bg:#F1F2F4;--surface:#FCFCFD;--band:#F3F4F7;--line:#E2E4E9;--line-2:#B9BEC8;--ink:#14171C;--ink-2:#414857;--ink-3:#5F6777;--accent-soft:#E6E9FB;--accent-text:#2B3BB8;--ok:#0B6B53;--ok-soft:#DDF1EA;--wait:#8F4A00;--wait-soft:#FBEBD3;--bad:#B42318;--control:#FFFFFF;
+--sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--cols:minmax(280px,1fr) 136px 280px 148px 272px}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#0F1115;--surface:#161920;--band:#12151A;--line:#262A33;--line-2:#3F4551;--ink:#ECEEF2;--ink-2:#B7BDC8;--ink-3:#8C93A1;--accent-soft:#1F2548;--accent-text:#AAB4FF;--ok:#5DD3AE;--ok-soft:#10362C;--wait:#F2B25C;--wait-soft:#3A2A10;--bad:#FF8A7A;--control:#1C2028}}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 var(--sans)}
+main{max-width:1400px;margin:0 auto;padding:28px 32px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px}
+a{color:var(--accent-text);text-decoration:none}a:hover{text-decoration:underline}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px}
+header>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.sub{font-size:13px;font-weight:500;color:var(--ink-2)}
+.upd{font:400 12.5px var(--mono);color:var(--ink-3)}
+button,select,a.btn{box-sizing:border-box;min-height:36px;padding:0 14px;border:1px solid var(--line-2);border-radius:7px;background:var(--control);color:var(--ink);font:500 13px var(--sans);white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+select{font-weight:400;padding:0 10px;min-width:0}
+button:hover,a.btn:hover{border-color:var(--ink-3);text-decoration:none}
+button:disabled{opacity:.6;cursor:default}
+.sm{min-height:30px;padding:0 10px;border-radius:6px;background:transparent;color:var(--ink-2);font-size:12.5px}
+.sm.primary{color:var(--accent-text);padding:0 12px}
+.seg{display:inline-flex}.seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:7px 0 0 7px;margin:0}.seg button:last-child{border-radius:0 7px 7px 0}
+.seg button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent-text)}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap;background:var(--line);color:var(--ink-2)}
+.pill.s{padding:1px 8px;font-size:12px}
+.pill.accent{background:var(--accent-soft);color:var(--accent-text)}.pill.wait{background:var(--wait-soft);color:var(--wait)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.key{font:500 13px var(--mono)}.type{font-size:12px;color:var(--ink-3)}
+.dot{flex:none;width:7px;height:7px;box-sizing:border-box;border-radius:50%;border:1.5px solid var(--ink-3)}.dot.live{background:var(--ink-3)}
+.name{min-width:0;font-size:13px;color:var(--ink-2);overflow-wrap:anywhere}
+.meta{font:400 12px var(--mono);color:var(--ink-3);overflow-wrap:anywhere}
+.none{font-size:12.5px;color:var(--ink-3)}
+.pr{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px}.pr a{font:500 12.5px var(--mono)}.pr .d{font-size:12px;color:var(--ink-2)}
+.acts{display:flex;gap:8px}
+.table{overflow-x:auto;border:1px solid var(--line-2);border-radius:10px;background:var(--surface)}
+.table>div{min-width:1180px}
+.r{display:grid;grid-template-columns:var(--cols);column-gap:20px;align-items:center;padding:12px 20px}
+.r.head{padding:10px 20px;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.r.t{border-top:1px solid var(--line-2)}
+.r.t .title{font-size:14.5px;font-weight:600;line-height:1.35;text-wrap:pretty}
+.r.t .prs{display:flex;flex-direction:column;gap:6px;min-width:0}.r.t .pr .d{flex-basis:100%}
+.r.t select{width:100%}.r .acts>*{flex:1}.r .acts>.primary{flex:1.5}
+.r.s{padding:4px 20px;background:var(--band);border-top:1px solid var(--line)}
+.r.s .who{display:flex;align-items:center;gap:8px;min-width:0;padding-left:18px}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(520px,100%),1fr));gap:24px;align-items:start}
+.board section{min-width:0}.colh{display:flex;align-items:center;gap:10px}.colh h2{margin:0}.colh span{font-size:12.5px;color:var(--ink-3)}
+.card{margin-top:12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);overflow:hidden}
+.card .top{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.card h3{margin:0;font-size:15px;font-weight:600;line-height:1.35;text-wrap:pretty}
+.card .prs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:2px}
+.bs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:7px 16px;background:var(--band);border-top:1px solid var(--line)}
+.bs>div:first-child{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:1px}
+.bs .who{display:flex;align-items:center;gap:8px}.bs .meta{padding-left:15px;font-size:11.5px}.bs .acts{gap:6px}
+.card .foot{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px;border-top:1px solid var(--line)}.card .foot select{flex:1 1 160px}
+.list{border:1px solid var(--line-2);border-radius:10px;overflow:hidden;margin-top:12px}.list .bs:first-child{border-top:0}
+details>summary{cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2)}details>.body{margin-top:12px}
+.banner{border:1px solid var(--bad);color:var(--bad);border-radius:10px;padding:8px 12px;background:var(--surface)}
+@media (pointer:coarse){button,select,a.btn{min-height:44px}}
 </style></head><body><main>
-<header><h1>Ticket Command Deck</h1><span id="upd" class="mut"></span><button id="refresh">Refresh</button></header>
-<div id="errors"></div><div id="tickets"></div>
-<details id="unl"><summary>Unlinked sessions</summary><p class="mut">type /ticket KEY in a session to link it</p><div id="unlinked"></div></details>
+<header>
+<div><h1>Ticket Command Deck</h1><span id="sub" class="sub"></span></div>
+<div><span id="upd" class="upd"></span>
+<span class="seg" role="group" aria-label="Layout"><button id="v-rows" type="button">Rows</button><button id="v-board" type="button">Board</button></span>
+<button id="refresh" type="button">Refresh</button></div>
+</header>
+<div id="errors"></div>
+<div id="active"></div>
+<details id="todo-d"><summary id="todo-s">To do</summary><div id="todo" class="body"></div></details>
+<details><summary id="unl-s">Unlinked sessions</summary><p class="none">Type /ticket KEY in a session to link it.</p><div id="unlinked"></div></details>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {
   const e = Object.assign(document.createElement(tag), props);
-  e.append(...kids.filter((k) => k != null));
+  e.append(...kids.flat().filter((k) => k != null));
   return e;
 };
 const base = (p) => p.split('/').filter(Boolean).pop() || p;
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const ago = (iso) => {
   const s = (Date.now() - new Date(iso)) / 1000;
   for (const [n, u] of [[86400, 'd'], [3600, 'h'], [60, 'm']]) if (s >= n) return Math.floor(s / n) + u + ' ago';
   return 'just now';
 };
 const store = {
-  get() { try { return localStorage.getItem('lastCwd'); } catch { return null; } },
-  set(v) { try { localStorage.setItem('lastCwd', v); } catch {} },
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
+let data = null;
+let view = location.hash === '#board' ? 'board' : location.hash === '#rows' ? 'rows' : store.get('view') || 'rows';
+
 async function post(path, body, btn) {
   const old = btn.textContent; btn.disabled = true;
   try {
@@ -51,78 +97,136 @@ async function post(path, body, btn) {
   } catch { btn.textContent = 'Failed'; }
   setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 2000);
 }
-function prBadge(p) {
-  const state = p.state === 'OPEN' ? (p.isDraft ? 'draft' : 'open') : p.state.toLowerCase();
-  const r = p.reviews, parts = [state];
-  if (p.state === 'OPEN') {
-    parts.push(p.reviewDecision === 'APPROVED' ? 'approved' : p.reviewDecision === 'CHANGES_REQUESTED' || r.changesRequested ? 'changes requested'
-      : r.approved ? `${r.approved} approval${r.approved > 1 ? 's' : ''}`
-      : p.reviewRequests ? `${p.reviewRequests} review${p.reviewRequests > 1 ? 's' : ''} requested` : 'no reviews');
-    if (p.checks) parts.push('checks ' + p.checks.toLowerCase());
-  }
-  const cls = p.state === 'MERGED' ? 'ok' : p.state === 'CLOSED' || p.checks === 'FAILURE' || p.reviewDecision === 'CHANGES_REQUESTED' ? 'bad' : p.reviewDecision === 'APPROVED' || r.approved ? 'ok' : '';
-  return el('a', { className: 'pill ' + cls, href: p.url, target: '_blank', rel: 'noopener', title: p.title },
-    `${base(p.repo)}#${p.number} · ${parts.join(' · ')}`);
+
+const statusTone = (t) => /review/i.test(t.status) ? 'wait' : t.statusCategory === 'indeterminate' ? 'accent' : '';
+
+function prInfo(p) {
+  if (p.state !== 'OPEN') return { state: p.state === 'MERGED' ? 'Merged' : 'Closed', tone: '', detail: '' };
+  const r = p.reviews, changes = p.reviewDecision === 'CHANGES_REQUESTED' || r.changesRequested > 0;
+  const failed = p.checks === 'FAILURE' || p.checks === 'ERROR';
+  const review = changes ? 'Changes requested' : r.approved ? plural(r.approved, 'approval')
+    : p.reviewRequests ? plural(p.reviewRequests, 'review') + ' requested' : 'No reviews yet';
+  const checks = p.checks === 'SUCCESS' ? 'checks passed' : failed ? 'checks failed' : p.checks ? 'checks running' : null;
+  const threads = p.unresolved ? plural(p.unresolved, 'unresolved comment') : null;
+  return {
+    state: p.isDraft ? 'Draft' : 'Open',
+    tone: p.isDraft ? '' : r.approved && !changes && !failed && !threads ? 'ok' : 'wait',
+    detail: [review, threads, checks].filter(Boolean).join(' · '),
+  };
 }
-function sessionLine(s) {
-  const copy = el('button', {}, 'Copy');
+function prNode(p) {
+  const i = prInfo(p);
+  return el('div', { className: 'pr' },
+    el('a', { href: p.url, target: '_blank', rel: 'noopener', title: p.title }, `${base(p.repo)}#${p.number}`),
+    el('span', { className: 'pill s ' + i.tone }, i.state),
+    i.detail ? el('span', { className: 'd' }, i.detail) : null);
+}
+const prNodes = (t) => t.prs.length ? t.prs.map(prNode) : [el('span', { className: 'none' }, 'No pull request yet')];
+const keyLine = (t) => el('div', {},
+  el('a', { className: 'key', href: t.url, target: '_blank', rel: 'noopener' }, t.key), ' ', el('span', { className: 'type' }, t.type));
+
+function sessionActions(s) {
+  const copy = el('button', { type: 'button', className: 'sm', title: 'Copy the terminal resume command' }, 'Copy');
   copy.onclick = async () => {
     try { await navigator.clipboard.writeText(`cd '${s.cwd.replace(/'/g, "'\\''")}' && claude --resume ${s.id}`); copy.textContent = 'Copied'; } catch { copy.textContent = 'Failed'; }
     setTimeout(() => (copy.textContent = 'Copy'), 1500);
   };
-  const resume = el('button', {}, 'Resume');
-  resume.onclick = () => post('/api/resume', { sessionId: s.id }, resume);
-  const app = el('a', { className: 'btn', href: 'claude://resume?session=' + s.id, title: 'Open in the Claude desktop app' }, 'App');
-  return el('div', { className: 'ses' },
-    s.live ? el('span', { className: 'dot', title: 'live' }) : null,
-    el('span', { className: 't' }, s.title),
-    s.live ? el('span', { className: 'pill ok' }, s.live.status) : null,
-    el('span', { className: 'mut' }, s.branches.at(-1) ?? ''),
-    el('span', { className: 'pill', title: s.cwd }, base(s.cwd)),
-    el('span', { className: 'mut' }, ago(s.lastActive)),
-    resume, app, copy);
+  const term = el('button', { type: 'button', className: 'sm', title: 'Resume in the terminal' }, 'Terminal');
+  term.onclick = () => post('/api/resume', { sessionId: s.id }, term);
+  return el('div', { className: 'acts' },
+    el('a', { className: 'btn sm primary', href: 'claude://resume?session=' + s.id, title: 'Resume in the Claude app' }, 'Resume'), term, copy);
 }
-function ticketCard(t, cwds) {
-  const sel = el('select');
+const dot = (s) => el('span', { className: 'dot' + (s.live ? ' live' : ''), ariaHidden: 'true' });
+const liveText = (s) => s.live ? s.live.status.charAt(0).toUpperCase() + s.live.status.slice(1) : '';
+const branch = (s) => s.branches.at(-1) ?? '';
+
+function newControls(t, cwds) {
+  const sel = el('select', { ariaLabel: 'Repo for a new session' });
   for (const c of cwds) sel.append(el('option', { value: c, title: c }, base(c)));
-  const want = t.sessions[0]?.cwd ?? store.get();
+  const want = t.sessions[0]?.cwd ?? store.get('lastCwd');
   if (cwds.includes(want)) sel.value = want;
-  sel.onchange = () => store.set(sel.value);
-  const nb = el('button', {}, 'New session');
-  nb.onclick = () => { store.set(sel.value); post('/api/new', { key: t.key, cwd: sel.value }, nb); };
-  const na = el('a', { className: 'btn', title: 'New session in the Claude desktop app' }, 'New in app');
-  const setNa = () => (na.href = 'claude://code/new?' + new URLSearchParams({ folder: sel.value, q: '/ticket ' + t.key }));
-  setNa(); sel.addEventListener('change', setNa);
-  return el('div', { className: 'card' },
-    el('div', { className: 'row' },
-      el('a', { className: 'key', href: t.url, target: '_blank', rel: 'noopener' }, t.key),
-      el('span', { className: 'mut' }, t.type),
-      el('span', { className: 'sum' }, t.summary),
-      el('span', { className: 'pill' }, t.status),
-      ...t.prs.map(prBadge), sel, nb, na),
-    ...t.sessions.map(sessionLine));
+  const app = el('a', { className: 'btn', title: 'New session in the Claude app' }, 'New session');
+  const setApp = () => (app.href = 'claude://code/new?' + new URLSearchParams({ folder: sel.value, q: '/ticket ' + t.key }));
+  setApp();
+  sel.onchange = () => { store.set('lastCwd', sel.value); setApp(); };
+  app.onclick = () => store.set('lastCwd', sel.value);
+  const term = el('button', { type: 'button', title: 'New session in the terminal' }, 'New in terminal');
+  term.onclick = () => { store.set('lastCwd', sel.value); post('/api/new', { key: t.key, cwd: sel.value }, term); };
+  return { sel, app, term };
 }
+
+function rowsView(tickets, cwds) {
+  const head = el('div', { className: 'r head' }, ...['Ticket · Session', 'Status', 'Pull requests · Branch', 'Repo', 'Start · Resume'].map((h) => el('span', {}, h)));
+  const rows = tickets.flatMap((t) => {
+    const n = newControls(t, cwds);
+    return [
+      el('div', { className: 'r t' },
+        el('div', {}, keyLine(t), el('div', { className: 'title' }, t.summary)),
+        el('div', {}, el('span', { className: 'pill ' + statusTone(t) }, t.status)),
+        el('div', { className: 'prs' }, prNodes(t)),
+        n.sel,
+        el('div', { className: 'acts' }, n.app, n.term)),
+      ...t.sessions.map((s) => el('div', { className: 'r s' },
+        el('div', { className: 'who' }, dot(s), el('span', { className: 'name' }, s.title)),
+        el('div', { className: 'type' }, liveText(s)),
+        el('div', { className: 'meta' }, `${branch(s)} · ${ago(s.lastActive)}`),
+        el('div', { className: 'meta', title: s.cwd }, base(s.cwd)),
+        sessionActions(s))),
+    ];
+  });
+  return el('div', { className: 'table' }, el('div', {}, head, rows));
+}
+
+const sessionBand = (s) => el('div', { className: 'bs' },
+  el('div', {},
+    el('div', { className: 'who' }, dot(s), el('span', { className: 'name' }, s.title)),
+    el('div', { className: 'meta', title: s.cwd }, [liveText(s), branch(s), base(s.cwd), ago(s.lastActive)].filter(Boolean).join(' · '))),
+  sessionActions(s));
+
+function boardView(tickets, cwds) {
+  const cols = new Map();
+  for (const t of tickets) cols.set(t.status, [...(cols.get(t.status) ?? []), t]);
+  return el('div', { className: 'board' }, [...cols].map(([status, ts]) => el('section', {},
+    el('div', { className: 'colh' }, el('h2', { className: 'pill ' + statusTone(ts[0]) }, status), el('span', {}, plural(ts.length, 'ticket'))),
+    ts.map((t) => {
+      const n = newControls(t, cwds);
+      return el('div', { className: 'card' },
+        el('div', { className: 'top' }, keyLine(t), el('h3', {}, t.summary), el('div', { className: 'prs' }, prNodes(t))),
+        t.sessions.map(sessionBand),
+        el('div', { className: 'foot' }, n.sel, n.app, n.term));
+    }))));
+}
+
+function render() {
+  for (const v of ['rows', 'board']) $('v-' + v).setAttribute('aria-pressed', String(view === v));
+  if (!data) return;
+  const draw = view === 'board' ? boardView : rowsView;
+  const active = data.tickets.filter((t) => t.statusCategory !== 'new');
+  const todo = data.tickets.filter((t) => t.statusCategory === 'new');
+  $('sub').textContent = `In progress · ${plural(active.length, 'ticket')}`;
+  $('active').replaceChildren(active.length ? draw(active, data.cwds) : el('p', { className: 'none' }, 'No tickets in progress.'));
+  $('todo-d').hidden = !todo.length;
+  $('todo-s').textContent = `To do · ${plural(todo.length, 'ticket')}`;
+  $('todo').replaceChildren(draw(todo, data.cwds));
+  const cutoff = Date.now() - 14 * 864e5;
+  const un = data.unlinked.filter((s) => new Date(s.lastActive) > cutoff);
+  $('unl-s').textContent = `Unlinked sessions · ${un.length}`;
+  $('unlinked').replaceChildren(un.length ? el('div', { className: 'list' }, un.map(sessionBand)) : '');
+}
+
 async function load(fresh) {
   $('refresh').disabled = true;
   try {
-    const d = await (await fetch('/api/deck' + (fresh === true ? '?fresh=1' : ''))).json();
-    $('errors').replaceChildren(...d.errors.map((e) => el('div', { className: 'banner' }, e)));
-    const groups = [['indeterminate', 'In progress'], ['new', 'To do']];
-    const rest = d.tickets.filter((t) => !groups.some(([k]) => k === t.statusCategory));
-    $('tickets').replaceChildren(...[...groups, ['', 'Other']].flatMap(([k, name]) => {
-      const ts = k ? d.tickets.filter((t) => t.statusCategory === k) : rest;
-      return ts.length ? [el('h2', {}, `${name} (${ts.length})`), ...ts.map((t) => ticketCard(t, d.cwds))] : [];
-    }));
-    const cutoff = Date.now() - 14 * 864e5;
-    const un = d.unlinked.filter((s) => new Date(s.lastActive) > cutoff);
-    $('unl').querySelector('summary').textContent = `Unlinked sessions (${un.length})`;
-    $('unlinked').replaceChildren(...un.map((s) => el('div', { className: 'card' }, sessionLine(s))));
-    $('upd').textContent = 'updated ' + new Date().toLocaleTimeString();
+    data = await (await fetch('/api/deck' + (fresh === true ? '?fresh=1' : ''))).json();
+    $('errors').replaceChildren(...data.errors.map((e) => el('div', { className: 'banner' }, e)));
+    render();
+    $('upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (e) {
     $('errors').replaceChildren(el('div', { className: 'banner' }, 'Deck failed: ' + e.message));
   }
   $('refresh').disabled = false;
 }
+for (const v of ['rows', 'board']) $('v-' + v).onclick = () => { view = v; store.set('view', v); render(); };
 $('refresh').onclick = () => load(true);
-load(); setInterval(load, 60000);
+render(); load(); setInterval(load, 60000);
 </script></body></html>

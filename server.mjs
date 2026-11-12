@@ -84,7 +84,7 @@ async function github(fresh) {
 }
 
 async function fetchPrs() {
-  const query = `{search(query:"is:pr author:@me sort:updated-desc",type:ISSUE,first:100){nodes{... on PullRequest{number title url state isDraft reviewDecision headRefName repository{nameWithOwner} latestReviews(first:20){nodes{state}} reviewRequests{totalCount} commits(last:1){nodes{commit{statusCheckRollup{state}}}}}}}}`;
+  const query = `{search(query:"is:pr author:@me sort:updated-desc",type:ISSUE,first:100){nodes{... on PullRequest{number title url state isDraft reviewDecision headRefName repository{nameWithOwner} latestReviews(first:20){nodes{state}} reviewRequests{totalCount} reviewThreads(first:100){nodes{isResolved}} commits(last:1){nodes{commit{statusCheckRollup{state}}}}}}}}`;
   const { stdout } = await run('gh', ['api', 'graphql', '-f', 'query=' + query], { timeout: 30000, maxBuffer: 32e6 });
   return JSON.parse(stdout).data.search.nodes.filter((n) => n.url).map(normalizePr);
 }
