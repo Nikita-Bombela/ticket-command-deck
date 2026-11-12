@@ -12,7 +12,7 @@ Everything runs on your machine. The deck reads your Jira tickets, your GitHub p
 - [GitHub CLI](https://cli.github.com), logged in with `gh auth login`
 - [WezTerm](https://wezterm.org), with `wezterm` on your `PATH`. WezTerm is the only supported terminal for now.
 - A Jira Cloud API token
-- The Claude desktop app, for the **Resume** and **New session** buttons. Without it, use **Terminal** and **New in terminal**.
+- Optional: the Claude desktop app. Without it, set **Open in** to **Terminal**.
 
 ## Set up
 
@@ -64,7 +64,7 @@ The deck links a session to a ticket when the ticket key, such as `PROJ-123`, ap
 - The session title. Set it with `claude -n "PROJ-123 login fix"` or with `/rename` in a session.
 - A `/ticket PROJ-123` command typed in the session.
 
-Sessions started with the **New in terminal** button are linked automatically. **New session** fills in the `/ticket` command for you in the Claude desktop app. Sessions from the last 14 days that match no ticket are listed under **Unlinked sessions**.
+Sessions started with the **Start session** button are linked automatically in the terminal. In the Claude desktop app, the button fills in the `/ticket` command as the prompt. Sessions from the last 14 days that match no ticket are listed under **Unlinked sessions**.
 
 ## What the page shows
 
@@ -72,15 +72,23 @@ Sessions started with the **New in terminal** button are linked automatically. *
 - **Pull requests.** Your pull requests whose branch or title contains the ticket key, and pull requests created by a linked session. Each one shows the state. An open pull request also shows its reviews, its unresolved review comments, and its checks.
 - **Sessions.** The title, branch, folder, and last activity of each session. A green dot marks a session that is running now.
 
-## Buttons
+## Controls
 
-| Button | Action |
+The header has two settings. The page remembers both.
+
+| Setting | Effect |
 |---|---|
-| **Resume** | Opens the session in the Claude desktop app. |
-| **Terminal** | Opens a WezTerm window in the session's folder and runs `claude --resume`. |
-| **Copy** | Copies the resume command for the terminal. |
-| **New session** | Starts a session for the ticket in the Claude desktop app, in the folder you select. |
-| **New in terminal** | Starts a Claude Code session for the ticket in WezTerm, in the folder you select. |
+| **Open in** | Where sessions open: the terminal (WezTerm) or the Claude desktop app. |
+| **Default repo** | The folder for a new session when the ticket has no earlier session. |
+
+Each row has one main button.
+
+| Control | Action |
+|---|---|
+| **Start session** | Starts a session for the ticket in the place set by **Open in**. |
+| Repo name on a ticket | The folder for that ticket's new session. It is the folder of the ticket's last session, or else the default repo. Select another folder to override it for that ticket. |
+| **Resume** | Opens the session in the place set by **Open in**. |
+| Three-dot menu | **Copy resume command** copies the terminal command. The second item opens the session in the other place. |
 | **Rows** and **Board** | Switch between a table of tickets and a board with one column for each Jira status. |
 | **Refresh** | Reloads all data. Pull requests are otherwise cached for 2 minutes. |
 
