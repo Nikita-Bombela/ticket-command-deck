@@ -56,6 +56,22 @@ Everything runs on your machine. The deck reads your Jira tickets, your GitHub p
 
 To use another port, start the deck with `PORT=5000 node server.mjs`.
 
+### If Jira and GitHub are already set up
+
+If another tool already created `~/.jira-env` with `JIRA_BASE`, `JIRA_EMAIL`, and `JIRA_TOKEN`, and `gh` is logged in, skip steps 2 to 4. Clone the repository, install the `/ticket` command (step 5), and start the deck.
+
+Step 5 is optional. Without the `/ticket` command, your sessions still appear, but you cannot link a session by hand, and **Start session** cannot link a new session that has no ticket branch yet.
+
+## Which sessions appear
+
+You do not need to register sessions. The deck scans the transcripts that Claude Code keeps in `~/.claude` on your computer, so it finds every existing and future session, whether you started it in the terminal or in the Claude desktop app.
+
+- A session appears under a ticket when the deck can link it. See the next section.
+- A session from the last 14 days that the deck cannot link appears under **Unlinked sessions**.
+- Sessions that ran in the cloud or on another computer are not in `~/.claude` and do not appear.
+
+The deck shows the tickets assigned to the Jira account in `~/.jira-env` and the pull requests of the GitHub account that `gh` is logged in to. Boards, the theme, and other settings are saved in your browser, so each person sets them up once.
+
 ## How a session is linked to a ticket
 
 The deck links a session to a ticket when the ticket key, such as `PROJ-123`, appears in one of these places:
