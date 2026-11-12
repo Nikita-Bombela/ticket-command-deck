@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ticket Command Deck</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1c2128;--mut:#667085;--bd:#dfe3e8;--acc:#2563eb;--ok:#15803d;--bad:#b91c1c;--warn:#b45309}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1317;--card:#171c22;--fg:#e6e9ee;--mut:#8b95a3;--bd:#2a313a;--acc:#6ea0ff;--ok:#4ade80;--bad:#f87171;--warn:#fbbf24}}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:12px}h1{font-size:20px;margin:0;flex:1}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:24px 0 8px}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+button,select,a.btn{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:3px 9px;cursor:pointer}
+button:hover,a.btn:hover{border-color:var(--acc);text-decoration:none}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.key{font-weight:600}.mut{color:var(--mut)}.sum{flex:1;min-width:200px}
+.pill{border:1px solid var(--bd);border-radius:99px;padding:0 8px;font-size:12px;white-space:nowrap}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.ses{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--bd);font-size:13px}
+.ses .t{flex:1;min-width:180px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.banner{background:color-mix(in srgb,var(--bad) 15%,transparent);border:1px solid var(--bad);border-radius:8px;padding:8px 12px;margin:12px 0}
+details summary{cursor:pointer;color:var(--mut)}
+</style></head><body><main>
+<header><h1>Ticket Command Deck</h1><span id="upd" class="mut"></span><button id="refresh">Refresh</button></header>
+<div id="errors"></div><div id="tickets"></div>
+<details id="unl"><summary>Unlinked sessions</summary><p class="mut">type /ticket KEY in a session to link it</p><div id="unlinked"></div></details>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...kids.filter((k) => k != null));
+  return e;
+};
+const base = (p) => p.split('/').filter(Boolean).pop() || p;
+const ago = (iso) => {
+  const s = (Date.now() - new Date(iso)) / 1000;
+  for (const [n, u] of [[86400, 'd'], [3600, 'h'], [60, 'm']]) if (s >= n) return Math.floor(s / n) + u + ' ago';
+  return 'just now';
+};
+const store = {
+  get() { try { return localStorage.getItem('lastCwd'); } catch { return null; } },
+  set(v) { try { localStorage.setItem('lastCwd', v); } catch {} },
+};
+async function post(path, body, btn) {
+  const old = btn.textContent; btn.disabled = true;
+  try {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    btn.textContent = r.ok ? 'Opened' : (await r.json()).error;
+  } catch { btn.textContent = 'Failed'; }
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 2000);
+}
+function prBadge(p) {
+  const state = p.state === 'OPEN' ? (p.isDraft ? 'draft' : 'open') : p.state.toLowerCase();
+  const r = p.reviews, parts = [state];
+  if (p.state === 'OPEN') {
+    parts.push(p.reviewDecision === 'APPROVED' ? 'approved' : p.reviewDecision === 'CHANGES_REQUESTED' || r.changesRequested ? 'changes requested'
+      : r.approved ? `${r.approved} approval${r.approved > 1 ? 's' : ''}`
+      : p.reviewRequests ? `${p.reviewRequests} review${p.reviewRequests > 1 ? 's' : ''} requested` : 'no reviews');
+    if (p.checks) parts.push('checks ' + p.checks.toLowerCase());
+  }
+  const cls = p.state === 'MERGED' ? 'ok' : p.state === 'CLOSED' || p.checks === 'FAILURE' || p.reviewDecision === 'CHANGES_REQUESTED' ? 'bad' : p.reviewDecision === 'APPROVED' || r.approved ? 'ok' : '';
+  return el('a', { className: 'pill ' + cls, href: p.url, target: '_blank', rel: 'noopener', title: p.title },
+    `${base(p.repo)}#${p.number} · ${parts.join(' · ')}`);
+}
+function sessionLine(s) {
+  const copy = el('button', {}, 'Copy');
+  copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(`cd '${s.cwd.replace(/'/g, "'\\''")}' && claude --resume ${s.id}`); copy.textContent = 'Copied'; } catch { copy.textContent = 'Failed'; }
+    setTimeout(() => (copy.textContent = 'Copy'), 1500);
+  };
+  const resume = el('button', {}, 'Resume');
+  resume.onclick = () => post('/api/resume', { sessionId: s.id }, resume);
+  const app = el('a', { className: 'btn', href: 'claude://resume?session=' + s.id, title: 'Open in the Claude desktop app' }, 'App');
+  return el('div', { className: 'ses' },
+    s.live ? el('span', { className: 'dot', title: 'live' }) : null,
+    el('span', { className: 't' }, s.title),
+    s.live ? el('span', { className: 'pill ok' }, s.live.status) : null,
+    el('span', { className: 'mut' }, s.branches.at(-1) ?? ''),
+    el('span', { className: 'pill', title: s.cwd }, base(s.cwd)),
+    el('span', { className: 'mut' }, ago(s.lastActive)),
+    resume, app, copy);
+}
+function ticketCard(t, cwds) {
+  const sel = el('select');
+  for (const c of cwds) sel.append(el('option', { value: c, title: c }, base(c)));
+  const want = t.sessions[0]?.cwd ?? store.get();
+  if (cwds.includes(want)) sel.value = want;
+  sel.onchange = () => store.set(sel.value);
+  const nb = el('button', {}, 'New session');
+  nb.onclick = () => { store.set(sel.value); post('/api/new', { key: t.key, cwd: sel.value }, nb); };
+  const na = el('a', { className: 'btn', title: 'New session in the Claude desktop app' }, 'New in app');
+  const setNa = () => (na.href = 'claude://code/new?' + new URLSearchParams({ folder: sel.value, q: '/ticket ' + t.key }));
+  setNa(); sel.addEventListener('change', setNa);
+  return el('div', { className: 'card' },
+    el('div', { className: 'row' },
+      el('a', { className: 'key', href: t.url, target: '_blank', rel: 'noopener' }, t.key),
+      el('span', { className: 'mut' }, t.type),
+      el('span', { className: 'sum' }, t.summary),
+      el('span', { className: 'pill' }, t.status),
+      ...t.prs.map(prBadge), sel, nb, na),
+    ...t.sessions.map(sessionLine));
+}
+async function load(fresh) {
+  $('refresh').disabled = true;
+  try {
+    const d = await (await fetch('/api/deck' + (fresh === true ? '?fresh=1' : ''))).json();
+    $('errors').replaceChildren(...d.errors.map((e) => el('div', { className: 'banner' }, e)));
+    const groups = [['indeterminate', 'In progress'], ['new', 'To do']];
+    const rest = d.tickets.filter((t) => !groups.some(([k]) => k === t.statusCategory));
+    $('tickets').replaceChildren(...[...groups, ['', 'Other']].flatMap(([k, name]) => {
+      const ts = k ? d.tickets.filter((t) => t.statusCategory === k) : rest;
+      return ts.length ? [el('h2', {}, `${name} (${ts.length})`), ...ts.map((t) => ticketCard(t, d.cwds))] : [];
+    }));
+    const cutoff = Date.now() - 14 * 864e5;
+    const un = d.unlinked.filter((s) => new Date(s.lastActive) > cutoff);
+    $('unl').querySelector('summary').textContent = `Unlinked sessions (${un.length})`;
+    $('unlinked').replaceChildren(...un.map((s) => el('div', { className: 'card' }, sessionLine(s))));
+    $('upd').textContent = 'updated ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    $('errors').replaceChildren(el('div', { className: 'banner' }, 'Deck failed: ' + e.message));
+  }
+  $('refresh').disabled = false;
+}
+$('refresh').onclick = () => load(true);
+load(); setInterval(load, 60000);
+</script></body></html>
