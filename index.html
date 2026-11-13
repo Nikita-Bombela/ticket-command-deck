@@ -380,7 +380,7 @@ function newControls(t) {
   const start = el('button', { type: 'button', title: 'Start a session in the ' + targetName[target()] }, 'Start session');
   start.onclick = () => target() === 'terminal'
     ? post('/api/new', { key: t.key, cwd: sel.value }, start)
-    : go('claude://code/new?' + new URLSearchParams({ folder: sel.value, q: '/ticket ' + t.key }));
+    : go('claude://code/new?' + new URLSearchParams({ folder: sel.value, q: `Link this session to Jira ticket ${t.key}. This line is a marker for the Ticket Command Deck, so no action is needed. Reply "Linked" and wait for my next message.` }));
   return { sel, start };
 }
 

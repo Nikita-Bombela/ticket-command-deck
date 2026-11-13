@@ -56,6 +56,24 @@ Everything runs on your machine. The deck reads your Jira tickets, your GitHub p
 
 To use another port, start the deck with `PORT=5000 node server.mjs`.
 
+### Run in the background
+
+Started with `node server.mjs`, the deck stops when you press Ctrl+C or close the terminal tab. To keep it running after you close the tab, start it in the background from the repository folder:
+
+```sh
+nohup node server.mjs > /tmp/ticket-command-deck.log 2>&1 &
+```
+
+Errors are written to `/tmp/ticket-command-deck.log`.
+
+To stop the deck:
+
+```sh
+lsof -ti tcp:4747 | xargs kill
+```
+
+The deck does not start again after a restart of your computer, so run the start command again. Also stop and start the deck after you pull a new version.
+
 ### If Jira and GitHub are already set up
 
 If another tool already created `~/.jira-env` with `JIRA_BASE`, `JIRA_EMAIL`, and `JIRA_TOKEN`, and `gh` is logged in, skip steps 2 to 4. Clone the repository, install the `/ticket` command (step 5), and start the deck.
@@ -79,8 +97,9 @@ The deck links a session to a ticket when the ticket key, such as `PROJ-123`, ap
 - A git branch the session worked on, such as `fix/PROJ-123-login`.
 - The session title. Set it with `claude -n "PROJ-123 login fix"` or with `/rename` in a session.
 - A `/ticket PROJ-123` command typed in the session.
+- A message that starts with "Link this session to Jira ticket PROJ-123".
 
-Sessions started with the **Start session** button are linked automatically in the terminal. In the Claude desktop app, the button fills in the `/ticket` command as the prompt. Sessions from the last 14 days that match no ticket are listed under **Unlinked sessions**.
+Sessions started with the **Start session** button are linked automatically. In the terminal, the button sends the `/ticket` command. In the Claude desktop app, it fills in a first message that starts with "Link this session to Jira ticket", because the app does not run a command from a link. Send that message to link the session. Sessions from the last 14 days that match no ticket are listed under **Unlinked sessions**.
 
 ## What the page shows
 

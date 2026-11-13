@@ -46,3 +46,12 @@ test('a ticket takes its epic from its parent, and a sub-task from its parent st
   assert.equal(loose.epic, null);
   assert.equal(epic.isEpic, true);
 });
+
+test('a session started from the Claude app is linked by its first message', () => {
+  const sentence = parseTranscript(line({ ...base, message: { role: 'user', content: 'Link this session to Jira ticket PROJ-55. No action is needed.' } }), 'a');
+  const inBlock = parseTranscript(line({ ...base, message: { role: 'user', content: [{ type: 'text', text: 'Link this session to Jira ticket PROJ-66.' }] } }), 'b');
+  const mention = parseTranscript(line({ ...base, message: { role: 'user', content: 'Please compare this with PROJ-77.' } }), 'c');
+  assert.deepEqual(sentence.keys, ['PROJ-55']);
+  assert.deepEqual(inBlock.keys, ['PROJ-66']);
+  assert.deepEqual(mention.keys, []);
+});

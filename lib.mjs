@@ -16,8 +16,10 @@ export function parseTranscript(text, id) {
   const customs = all(text, /"customTitle":"((?:[^"\\]|\\.)*)"/g).map(unescape);
   const ais = all(text, /"aiTitle":"((?:[^"\\]|\\.)*)"/g).map(unescape);
   const args = all(text, /<command-name>\/ticket<\/command-name>[\s\S]{0,300}?<command-args>([^<]*)<\/command-args>/g);
+  // The Claude app turns the slash of a prefilled "/ticket" into a look-alike so that links cannot run commands, hence the sentence form.
+  const marks = all(text, /"(?:content|text)":"Link this session to Jira ticket\s+([A-Za-z][A-Za-z0-9]+-\d+)/gi);
   const keys = new Set();
-  for (const s of [...branches, customs.at(-1), ais.at(-1), ...args]) if (s) for (const k of keysIn(s)) keys.add(k);
+  for (const s of [...branches, customs.at(-1), ais.at(-1), ...args, ...marks]) if (s) for (const k of keysIn(s)) keys.add(k);
   const ts = text.lastIndexOf('"timestamp":"');
   return {
     id,
