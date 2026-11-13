@@ -104,6 +104,12 @@ select.quiet{min-height:30px;padding:0;border:0;background:transparent;color:var
 .list{border:1px solid var(--line-2);border-radius:var(--r-l);overflow:hidden;margin-top:12px}.list .bs:first-child{border-top:0}
 details>summary{cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2)}details>.body{margin-top:12px}
 .banner{border:1px solid var(--bad);color:var(--bad);border-radius:var(--r-l);padding:8px 12px;background:var(--surface)}
+.setup{display:flex;flex-direction:column;gap:8px;padding:16px 20px;border:1px solid var(--wait);border-radius:var(--r-l);background:var(--surface)}
+.setup h2{margin:0;font-size:15px;font-weight:600}.setup p{margin:0;color:var(--ink-2)}
+.setup ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.setup .code{display:flex;align-items:flex-start;gap:8px;margin-top:6px}
+.setup pre{flex:1;min-width:0;margin:0;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--band);font:12.5px/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+#errors{display:flex;flex-direction:column;gap:8px}
 .back{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-size:13px;font-weight:500}
 .sec{display:flex;flex-direction:column;gap:10px}
 .box{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-l)}.box>*+*{border-top:1px solid var(--line)}
@@ -462,7 +468,7 @@ function renderDeck() {
   const sprint = data.board?.sprint, days = sprint?.endDate ? Math.ceil((new Date(sprint.endDate) - Date.now()) / 864e5) : null;
   $('sub').textContent = [sprint?.name, days == null ? null : days > 0 ? plural(days, 'day') + ' left' : 'sprint ended', `${active.length} in progress`].filter(Boolean).join(' · ');
   const shown = byEpic ? byProgress(data.tickets) : active;
-  $('active').replaceChildren(shown.length ? draw(shown, byEpic) : el('p', { className: 'none' }, b ? 'No open tickets for you on this board.' : 'No open tickets.'));
+  $('active').replaceChildren(shown.length ? draw(shown, byEpic) : el('p', { className: 'none' }, data.jiraSetup ? 'Your tickets appear here once Jira is connected.' : b ? 'No open tickets for you on this board.' : 'No open tickets.'));
   $('todo-d').hidden = byEpic || !todo.length;
   $('todo-s').textContent = `To do · ${plural(todo.length, 'ticket')}`;
   $('todo').replaceChildren(byEpic ? '' : draw(todo, false));
@@ -545,6 +551,44 @@ function render() {
   (settings ? renderSettings : renderDeck)();
 }
 
+const JIRA_LINES = 'JIRA_BASE=https://your-company.atlassian.net\nJIRA_EMAIL=you@your-company.com\nJIRA_TOKEN=your-api-token';
+function jiraSetupCard(problem) {
+  const tokens = () => el('a', { href: 'https://id.atlassian.com/manage-profile/security/api-tokens', target: '_blank', rel: 'noopener' }, 'Atlassian API tokens page');
+  const code = (text) => {
+    const copy = el('button', { type: 'button', className: 'sm' }, 'Copy');
+    copy.onclick = () => navigator.clipboard.writeText(text).then(() => flash(copy, 'Copied'), () => flash(copy, 'Copy failed'));
+    return el('div', { className: 'code' }, el('pre', {}, text), copy);
+  };
+  const refresh = ['Select Refresh. You do not need to restart the deck.'];
+  const cases = {
+    'no-file': ['The deck reads your Jira login from the file ~/.jira-env, and that file does not exist on this computer.', [
+      ['Create a Jira API token on the ', tokens(), '.'],
+      ['Run this command in a terminal, with your own Jira address, email and token in it:', code(`printf '${JIRA_LINES.replace(/\n/g, '\\n')}\\n' > ~/.jira-env && chmod 600 ~/.jira-env`)],
+      refresh]],
+    missing: [`The file ~/.jira-env exists, but it has no value for ${(problem.missing ?? []).join(', ')}.`, [
+      ['Open ~/.jira-env in an editor and make sure it has these three lines, with your own values:', code(JIRA_LINES)],
+      ['If you have no token yet, create one on the ', tokens(), '.'],
+      refresh]],
+    unreadable: ['The file ~/.jira-env exists, but the deck is not allowed to read it.', [
+      ['Run this command in a terminal:', code('chmod 600 ~/.jira-env')],
+      refresh]],
+    auth: ['Jira rejected the email and token in ~/.jira-env. Usually the token has expired or was revoked, or JIRA_EMAIL is not the email of your Atlassian account.', [
+      ['Create a new token on the ', tokens(), '.'],
+      ['Replace the value of JIRA_TOKEN in ~/.jira-env, and check JIRA_EMAIL.'],
+      refresh]],
+    unreachable: [`The deck could not reach Jira at ${problem.base}.`, [
+      ['Check that JIRA_BASE in ~/.jira-env is your Jira address, for example https://your-company.atlassian.net.'],
+      ['Check your internet connection or VPN.'],
+      refresh]],
+  };
+  const [why, steps] = cases[problem.code] ?? ['The deck could not read your Jira login.', [refresh]];
+  return el('div', { className: 'setup', role: 'alert' },
+    el('h2', {}, "Jira is not connected, so the deck can't show your tickets"),
+    el('p', {}, why),
+    el('ol', {}, steps.map((st) => el('li', {}, st))),
+    el('p', { className: 'none' }, 'Your Claude sessions are still listed under Unlinked sessions.'));
+}
+
 let loads = 0;
 function busy(on) {
   const b = $('refresh');
@@ -562,7 +606,7 @@ async function load(fresh) {
     const d = await (await fetch('/api/deck?' + qs)).json();
     if (want !== boardId) return;
     data = d;
-    $('errors').replaceChildren(...data.errors.map((e) => el('div', { className: 'banner' }, e)));
+    $('errors').replaceChildren(...(data.jiraSetup ? [jiraSetupCard(data.jiraSetup)] : []), ...data.errors.map((e) => el('div', { className: 'banner' }, e)));
     render();
     $('upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (e) {

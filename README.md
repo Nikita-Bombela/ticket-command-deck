@@ -33,6 +33,8 @@ Everything runs on your machine. The deck reads your Jira tickets, your GitHub p
    JIRA_TOKEN=your-api-token
    ```
 
+   The deck also accepts the names `JIRA_DOMAIN`, `JIRA_USER`, and `JIRA_API_TOKEN`.
+
 4. Make the file readable only by you.
 
    ```sh
@@ -79,6 +81,12 @@ The deck does not start again after a restart of your computer, so run the start
 If another tool already created `~/.jira-env` with `JIRA_BASE`, `JIRA_EMAIL`, and `JIRA_TOKEN`, and `gh` is logged in, skip steps 2 to 4. Clone the repository, install the `/ticket` command (step 5), and start the deck.
 
 Step 5 is optional. Without the `/ticket` command, your sessions still appear, but you cannot link a session by hand, and **Start session** cannot link a new session that has no ticket branch yet.
+
+## If no tickets appear
+
+When the deck cannot connect to Jira, the page shows a notice that names the cause and lists the steps to fix it. The causes are a missing `~/.jira-env` file, a missing value in the file, a token that Jira rejects, and a Jira address that cannot be reached. After you fix the file, select **Refresh**. You do not need to restart the deck.
+
+If the GitHub CLI is not installed or not logged in, the page says so, and the deck shows tickets and sessions without pull requests.
 
 ## Which sessions appear
 

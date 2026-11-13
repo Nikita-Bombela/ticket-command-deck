@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTranscript, buildDeck, nonEpicParents } from './lib.mjs';
+import { parseTranscript, buildDeck, nonEpicParents, parseJiraEnv } from './lib.mjs';
 
 const line = (o) => JSON.stringify(o) + '\n';
 const base = { sessionId: 's', cwd: '/w/repo', timestamp: '2026-01-01T00:00:00.000Z' };
@@ -54,4 +54,12 @@ test('a session started from the Claude app is linked by its first message', () 
   assert.deepEqual(sentence.keys, ['PROJ-55']);
   assert.deepEqual(inBlock.keys, ['PROJ-66']);
   assert.deepEqual(mention.keys, []);
+});
+
+test('the Jira file is read in either spelling, and missing values are named', () => {
+  assert.deepEqual(parseJiraEnv('JIRA_BASE=https://x.atlassian.net/\nexport JIRA_EMAIL="me@x.co"\nJIRA_TOKEN=abc\n'),
+    { base: 'https://x.atlassian.net', email: 'me@x.co', token: 'abc', missing: [] });
+  assert.deepEqual(parseJiraEnv('JIRA_DOMAIN=x.atlassian.net\nJIRA_USER=me@x.co\nJIRA_API_TOKEN=abc\n'),
+    { base: 'https://x.atlassian.net', email: 'me@x.co', token: 'abc', missing: [] });
+  assert.deepEqual(parseJiraEnv('JIRA_EMAIL=me@x.co\nJIRA_TOKEN=\n').missing, ['JIRA_BASE', 'JIRA_TOKEN']);
 });

@@ -5,7 +5,7 @@ import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { parseTranscript, buildDeck, nonEpicParents, normalizePr, safeSummary, KEY_RE, UUID_RE } from './lib.mjs';
+import { parseTranscript, buildDeck, nonEpicParents, parseJiraEnv, normalizePr, safeSummary, KEY_RE, UUID_RE } from './lib.mjs';
 
 const run = promisify(execFile);
 const PORT = Number(process.env.PORT) || 4747;
@@ -16,7 +16,7 @@ let lastDeck = null;
 async function scanSessions() {
   const projects = join(CLAUDE, 'projects');
   const files = [];
-  for (const d of await readdir(projects)) {
+  for (const d of await readdir(projects).catch(() => [])) {
     if (d.includes('-private-var-folders-')) continue;
     try {
       for (const f of await readdir(join(projects, d))) if (f.endsWith('.jsonl')) files.push(join(projects, d, f));
@@ -59,17 +59,25 @@ async function scanSessions() {
   return out.filter((s) => s.cwd).map((s) => ({ ...s, live: live.get(s.id) ?? null }));
 }
 
+// A setup problem carries a code so the page can explain the fix instead of showing a raw error.
+function setupError(code, extra = {}) {
+  const text = { 'no-file': '~/.jira-env does not exist', missing: '~/.jira-env is missing ' + (extra.missing ?? []).join(', '), unreadable: '~/.jira-env cannot be read', auth: 'Jira rejected the login in ~/.jira-env', unreachable: 'Jira cannot be reached at ' + extra.base }[code];
+  return Object.assign(new Error('Jira is not set up: ' + text), { setup: { code, ...extra } });
+}
+async function jiraEnv() {
+  const text = await readFile(join(homedir(), '.jira-env'), 'utf8').catch((e) => { throw setupError(e.code === 'ENOENT' ? 'no-file' : 'unreadable'); });
+  const env = parseJiraEnv(text);
+  if (env.missing.length) throw setupError('missing', { missing: env.missing });
+  return env;
+}
 async function jget(path, params) {
-  const env = {};
-  for (const l of (await readFile(join(homedir(), '.jira-env'), 'utf8')).split('\n')) {
-    const m = l.match(/^\s*(?:export\s+)?(\w+)=(.*?)\s*$/);
-    if (m) env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
-  }
-  const base = env.JIRA_BASE.replace(/\/+$/, '');
+  const { base, email, token } = await jiraEnv();
   const r = await fetch(`${base}${path}?` + new URLSearchParams(params), {
-    headers: { Authorization: 'Basic ' + Buffer.from(`${env.JIRA_EMAIL}:${env.JIRA_TOKEN}`).toString('base64'), Accept: 'application/json' },
+    headers: { Authorization: 'Basic ' + Buffer.from(`${email}:${token}`).toString('base64'), Accept: 'application/json' },
     signal: AbortSignal.timeout(20000),
-  });
+  }).catch(() => { throw setupError('unreachable', { base }); });
+  // With a wrong token Jira answers a search with HTTP 200 and no tickets, and only this header says the login failed.
+  if (r.status === 401 || /AUTHENTICATED_FAILED/.test(r.headers.get('x-seraph-loginreason') ?? '')) throw setupError('auth');
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return { base, body: await r.json() };
 }
@@ -129,17 +137,24 @@ async function fetchPrs() {
   return JSON.parse(stdout).data.search.nodes.filter((n) => n.url).map(normalizePr);
 }
 
+function githubProblem(e) {
+  if (e.code === 'ENOENT') return 'Pull requests are hidden: the GitHub CLI (gh) is not installed. Install it from https://cli.github.com, then run "gh auth login" in a terminal.';
+  if (/gh auth login|not logged in|authentication/i.test(String(e.stderr ?? e.message))) return 'Pull requests are hidden: the GitHub CLI is not logged in. Run "gh auth login" in a terminal, then select Refresh.';
+  return 'GitHub: ' + String(e.message).split('\n')[0].slice(0, 200);
+}
+
 async function deck(fresh, board) {
   const errors = [];
+  let jiraSetup = null;
   const [sessions, j, prs] = await Promise.all([
     scanSessions(),
-    jira(board).catch((e) => (errors.push('Jira: ' + e.message.replace(/\s+/g, ' ').slice(0, 200)), { base: '', issues: [], board: null })),
-    github(fresh).catch((e) => (errors.push('GitHub: ' + String(e.message).split('\n')[0].slice(0, 200)), [])),
+    jira(board).catch((e) => (e.setup ? (jiraSetup = e.setup) : errors.push('Jira: ' + e.message.replace(/\s+/g, ' ').slice(0, 200)), { base: '', issues: [], board: null })),
+    github(fresh).catch((e) => (errors.push(githubProblem(e)), [])),
   ]);
   const { tickets, unlinked } = buildDeck(j.issues, prs, sessions, j.base, await parentEpics(j.issues).catch(() => ({})));
   const cwds = [...new Set(sessions.map((s) => s.cwd))].filter(existsSync).sort();
   lastDeck = { tickets, sessions, cwds };
-  return { tickets, unlinked, cwds, errors, board: j.board, terminal: !!(await wezterm()) };
+  return { tickets, unlinked, cwds, errors, jiraSetup, board: j.board, terminal: !!(await wezterm()) };
 }
 
 // A server started from inside a Claude session would pass its child-session markers on, and the launched session would not save a transcript.

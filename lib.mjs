@@ -76,3 +76,20 @@ export function normalizePr(n) {
 }
 
 export const safeSummary = (s) => String(s).replace(/[^A-Za-z0-9 ._-]/g, '').slice(0, 60);
+
+const JIRA_NAMES = {
+  JIRA_BASE: ['JIRA_BASE', 'JIRA_DOMAIN', 'JIRA_URL', 'JIRA_HOST'],
+  JIRA_EMAIL: ['JIRA_EMAIL', 'JIRA_USER_EMAIL', 'JIRA_USER'],
+  JIRA_TOKEN: ['JIRA_TOKEN', 'JIRA_API_TOKEN'],
+};
+export function parseJiraEnv(text) {
+  const env = {};
+  for (const l of text.split('\n')) {
+    const m = l.match(/^\s*(?:export\s+)?(\w+)=(.*?)\s*$/);
+    if (m) env[m[1]] = m[2].replace(/^(['"])(.*)\1$/, '$2');
+  }
+  const value = (name) => JIRA_NAMES[name].map((n) => env[n]).find(Boolean);
+  const missing = Object.keys(JIRA_NAMES).filter((n) => !value(n));
+  const host = (value('JIRA_BASE') ?? '').replace(/\/+$/, '');
+  return { base: host && !/^https?:\/\//.test(host) ? 'https://' + host : host, email: value('JIRA_EMAIL'), token: value('JIRA_TOKEN'), missing };
+}
