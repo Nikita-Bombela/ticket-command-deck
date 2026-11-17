@@ -62,7 +62,7 @@ export function buildDeck(issues, prs, sessions, jiraBase, parentEpics = {}) {
   return { tickets, unlinked };
 }
 
-export function normalizePr(n) {
+export function normalizePr(n, viewer) {
   const r = (st) => n.latestReviews.nodes.filter((x) => x.state === st).length;
   return {
     repo: n.repository.nameWithOwner, number: n.number, title: n.title, url: n.url, state: n.state,
@@ -72,6 +72,8 @@ export function normalizePr(n) {
     unresolved: n.reviewThreads.nodes.filter((t) => !t.isResolved).length,
     checks: n.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null,
     branch: n.headRefName,
+    author: n.author?.login ?? null,
+    mine: !viewer || n.author?.login === viewer,
   };
 }
 

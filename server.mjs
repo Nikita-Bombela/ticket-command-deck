@@ -131,10 +131,31 @@ async function github(fresh) {
   return ghCache.prs;
 }
 
+const PR_FIELDS = 'number title url state isDraft reviewDecision headRefName author{login} repository{nameWithOwner} latestReviews(first:20){nodes{state}} reviewRequests{totalCount} reviewThreads(first:100){nodes{isResolved}} commits(last:1){nodes{commit{statusCheckRollup{state}}}}';
+const gql = async (query) => JSON.parse((await run('gh', ['api', 'graphql', '-f', 'query=' + query], { timeout: 40000, maxBuffer: 64e6 })).stdout).data;
+
 async function fetchPrs() {
-  const query = `{search(query:"is:pr author:@me sort:updated-desc",type:ISSUE,first:100){nodes{... on PullRequest{number title url state isDraft reviewDecision headRefName repository{nameWithOwner} latestReviews(first:20){nodes{state}} reviewRequests{totalCount} reviewThreads(first:100){nodes{isResolved}} commits(last:1){nodes{commit{statusCheckRollup{state}}}}}}}}`;
-  const { stdout } = await run('gh', ['api', 'graphql', '-f', 'query=' + query], { timeout: 30000, maxBuffer: 32e6 });
-  return JSON.parse(stdout).data.search.nodes.filter((n) => n.url).map(normalizePr);
+  const d = await gql(`{viewer{login} search(query:"is:pr author:@me sort:updated-desc",type:ISSUE,first:100){nodes{... on PullRequest{${PR_FIELDS}}}}}`);
+  return d.search.nodes.filter((n) => n.url).map((n) => normalizePr(n, d.viewer.login));
+}
+
+// Every pull request with a ticket key in its title, whoever opened it, inside the user's own organizations and account.
+let allCache = { at: 0, sig: '', prs: null };
+async function ticketPrs(keys, fresh) {
+  const safe = [...new Set(keys)].filter((k) => /^[A-Z][A-Z0-9_]+-\d+$/.test(k)).sort();
+  if (!safe.length) return [];
+  const sig = safe.join(',');
+  if (!fresh && allCache.sig === sig && Date.now() - allCache.at < 120000) return allCache.prs;
+  const { viewer } = await gql('{viewer{login organizations(first:50){nodes{login}}}}');
+  const scope = [...viewer.organizations.nodes.map((o) => 'org:' + o.login), 'user:' + viewer.login].filter((q) => /^(org|user):[A-Za-z0-9-]+$/.test(q)).join(' ');
+  // GitHub search allows five OR operators, so six keys go in each search.
+  const batches = [];
+  for (let i = 0; i < safe.length; i += 6) batches.push(safe.slice(i, i + 6));
+  const d = await gql(`{${batches.map((b, i) => `s${i}:search(query:"is:pr in:title ${scope} ${b.join(' OR ')}",type:ISSUE,first:50){nodes{... on PullRequest{${PR_FIELDS}}}}`).join(' ')}}`);
+  const prs = new Map();
+  for (const r of Object.values(d)) for (const n of r.nodes) if (n.url) prs.set(n.url, normalizePr(n, viewer.login));
+  allCache = { at: Date.now(), sig, prs: [...prs.values()] };
+  return allCache.prs;
 }
 
 function githubProblem(e) {
@@ -143,18 +164,22 @@ function githubProblem(e) {
   return 'GitHub: ' + String(e.message).split('\n')[0].slice(0, 200);
 }
 
-async function deck(fresh, board) {
+async function deck(fresh, board, allPrs) {
   const errors = [];
   let jiraSetup = null;
-  const [sessions, j, prs] = await Promise.all([
+  const recent = github(fresh).catch((e) => (errors.push(githubProblem(e)), []));
+  const [sessions, j] = await Promise.all([
     scanSessions(),
     jira(board).catch((e) => (e.setup ? (jiraSetup = e.setup) : errors.push('Jira: ' + e.message.replace(/\s+/g, ' ').slice(0, 200)), { base: '', issues: [], board: null })),
-    github(fresh).catch((e) => (errors.push(githubProblem(e)), [])),
   ]);
+  // The recent list alone misses a ticket's older pull requests, so both modes also search by ticket key.
+  const [mine, found] = await Promise.all([recent, ticketPrs(j.issues.map((i) => i.key), fresh).catch((e) => (errors.push(githubProblem(e)), []))]);
+  const have = new Set(mine.map((p) => p.url));
+  const prs = [...mine, ...found.filter((p) => !have.has(p.url))].filter((p) => allPrs || p.mine);
   const { tickets, unlinked } = buildDeck(j.issues, prs, sessions, j.base, await parentEpics(j.issues).catch(() => ({})));
   const cwds = [...new Set(sessions.map((s) => s.cwd))].filter(existsSync).sort();
   lastDeck = { tickets, sessions, cwds };
-  return { tickets, unlinked, cwds, errors, jiraSetup, board: j.board, terminal: !!(await wezterm()) };
+  return { tickets, unlinked, cwds, errors: [...new Set(errors)], jiraSetup, board: j.board, terminal: !!(await wezterm()) };
 }
 
 // A server started from inside a Claude session would pass its child-session markers on, and the launched session would not save a transcript.
@@ -203,7 +228,7 @@ http.createServer(async (req, res) => {
     if (req.method === 'GET' && url === '/api/deck') {
       const digits = (v) => /^\d{1,12}$/.test(v ?? '');
       const board = digits(qs.get('board')) ? { id: qs.get('board'), qf: (qs.get('qf') ?? '').split(',').filter(digits).slice(0, 10) } : null;
-      return send(200, await deck(qs.get('fresh') === '1', board));
+      return send(200, await deck(qs.get('fresh') === '1', board, qs.get('prs') === 'all'));
     }
     if (req.method === 'GET' && url === '/api/boards') return send(200, await boards(qs.get('q') ?? ''));
     if (req.method === 'POST' && actions[url]) {

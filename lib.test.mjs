@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTranscript, buildDeck, nonEpicParents, parseJiraEnv } from './lib.mjs';
+import { parseTranscript, buildDeck, nonEpicParents, parseJiraEnv, normalizePr } from './lib.mjs';
 
 const line = (o) => JSON.stringify(o) + '\n';
 const base = { sessionId: 's', cwd: '/w/repo', timestamp: '2026-01-01T00:00:00.000Z' };
@@ -62,4 +62,15 @@ test('the Jira file is read in either spelling, and missing values are named', (
   assert.deepEqual(parseJiraEnv('JIRA_DOMAIN=x.atlassian.net\nJIRA_USER=me@x.co\nJIRA_API_TOKEN=abc\n'),
     { base: 'https://x.atlassian.net', email: 'me@x.co', token: 'abc', missing: [] });
   assert.deepEqual(parseJiraEnv('JIRA_EMAIL=me@x.co\nJIRA_TOKEN=\n').missing, ['JIRA_BASE', 'JIRA_TOKEN']);
+});
+
+test("another person's pull request attaches by the ticket key in its title", () => {
+  const node = (author) => ({ number: 7, title: 'PROJ-5 | fix', url: 'https://github.com/o/r/pull/7', state: 'OPEN', isDraft: false, reviewDecision: null, headRefName: 'fix/x',
+    author: { login: author }, repository: { nameWithOwner: 'o/r' }, latestReviews: { nodes: [] }, reviewRequests: { totalCount: 0 }, reviewThreads: { nodes: [] }, commits: { nodes: [] } });
+  const theirs = normalizePr(node('teammate'), 'me');
+  assert.equal(theirs.mine, false);
+  assert.equal(theirs.author, 'teammate');
+  assert.equal(normalizePr(node('me'), 'me').mine, true);
+  const deck = buildDeck([{ key: 'PROJ-5', fields: { summary: 's', status: { name: 'S', statusCategory: { key: 'new' } }, issuetype: { name: 'Story' } } }], [theirs], [], 'https://j');
+  assert.deepEqual(deck.tickets[0].prs.map((p) => p.author), ['teammate']);
 });

@@ -30,6 +30,8 @@ button,select,a.btn{box-sizing:border-box;min-height:36px;padding:0 14px;border:
 select{font-weight:400;padding:0 10px;min-width:0}
 button:hover,a.btn:hover{border-color:var(--ink-3);text-decoration:none}
 button:disabled{opacity:.5;cursor:default}
+textarea{width:100%;min-height:84px;box-sizing:border-box;padding:8px 12px;resize:vertical;border:1px solid var(--line-2);border-radius:var(--r);background:var(--control);color:var(--ink);font:400 13px/1.5 var(--sans)}
+.preview{margin:0;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--band);font-size:13px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}.preview b{font-weight:500;color:var(--ink-3)}
 input[type=search]{width:100%;min-height:36px;box-sizing:border-box;padding:0 12px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--control);color:var(--ink);font:400 13px var(--sans)}
 .sm{min-height:30px;padding:0 10px;border-radius:var(--r-s);background:transparent;color:var(--ink-2);font-size:12.5px}
 .sm.primary{color:var(--accent-text);padding:0 12px}
@@ -133,6 +135,7 @@ details>summary{cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2)
 </header>
 <div class="bar">
 <div class="lbl">Group by <span id="groupby"></span></div>
+<div class="lbl">Pull requests <span id="prsmode"></span></div>
 <div class="lbl">Open in <span id="openin"></span></div>
 <label class="lbl">Default repo <select id="defcwd"></select></label>
 </div>
@@ -259,6 +262,7 @@ function seg(label, current, options, onPick) {
     return b;
   }));
 }
+const prsSeg = () => seg('Pull requests to show', pref('prs', 'mine'), [['mine', 'Mine'], ['all', 'All']], (v) => { setPref('prs', v); load(); });
 const openInSeg = () => seg('Open sessions in', target(), [
   ['terminal', 'Terminal', hasTerminal() ? '' : 'WezTerm was not found on this computer'], ['app', 'Claude app'],
 ], (v) => setPref('target', v));
@@ -301,6 +305,7 @@ function prNode(p) {
   return el('div', { className: 'pr' },
     el('a', { href: p.url, target: '_blank', rel: 'noopener', title: p.title }, `${base(p.repo)}#${p.number}`),
     el('span', { className: 'pill s ' + i.tone }, i.state),
+    p.mine === false && p.author ? el('span', { className: 'type' }, 'by ' + p.author) : null,
     i.detail ? el('span', { className: 'd' }, i.detail) : null);
 }
 const prNodes = (t) => t.prs.length ? t.prs.map(prNode) : [el('span', { className: 'none' }, 'No pull request yet')];
@@ -378,6 +383,17 @@ function defaultCwdSelect(node) {
   return node;
 }
 
+const DEFAULT_START = 'This line is a marker for the Ticket Command Deck, so no action is needed. Reply "Linked" and wait for my next message.';
+// The first sentence is fixed because the deck links an app session to its ticket by it.
+function startMessage(t) {
+  const body = pref('startMessage', DEFAULT_START).replace(/\{(key|summary|url)\}/g, (_, k) => t[k]).trim();
+  return body ? `Link this session to Jira ticket ${t.key}. ${body}` : '';
+}
+function appStartUrl(t, folder) {
+  const q = startMessage(t);
+  return 'claude://code/new?' + new URLSearchParams(q ? { folder, q } : { folder });
+}
+
 function newControls(t) {
   const sel = el('select', { className: 'quiet', ariaLabel: 'Repo for this ticket' }, cwdOptions());
   sel.value = overrides.get(t.key) ?? (pref('reuse', '1') === '1' ? t.sessions[0]?.cwd : null) ?? defaultCwd();
@@ -386,7 +402,7 @@ function newControls(t) {
   const start = el('button', { type: 'button', title: 'Start a session in the ' + targetName[target()] }, 'Start session');
   start.onclick = () => target() === 'terminal'
     ? post('/api/new', { key: t.key, cwd: sel.value }, start)
-    : go('claude://code/new?' + new URLSearchParams({ folder: sel.value, q: `Link this session to Jira ticket ${t.key}. This line is a marker for the Ticket Command Deck, so no action is needed. Reply "Linked" and wait for my next message.` }));
+    : go(appStartUrl(t, sel.value));
   return { sel, start };
 }
 
@@ -459,6 +475,7 @@ function renderDeck() {
   $('picker').replaceChildren(picker);
   const byEpic = grouped();
   $('groupby').replaceChildren(seg('Group tickets by', byEpic ? 'epic' : 'none', [['epic', 'Epic'], ['none', 'None']], (v) => setPref('group', v)));
+  $('prsmode').replaceChildren(prsSeg());
   $('openin').replaceChildren(openInSeg());
   defaultCwdSelect($('defcwd'));
   if (!data) { $('sub').textContent = 'Loading…'; return; }
@@ -504,6 +521,28 @@ function themeCard(t, current) {
 const srow = (title, desc, control) => el('div', { className: 'srow' }, el('div', { className: 'tx' }, el('h3', {}, title), el('p', {}, desc)), control);
 const section = (title, ...rows) => el('section', { className: 'sec' }, el('h2', { className: 'cap' }, title), el('div', { className: 'box' }, rows));
 
+function startMessageRow() {
+  const example = data?.tickets[0] ?? { key: 'PROJ-123', summary: 'Example ticket', url: 'https://your-company.atlassian.net/browse/PROJ-123' };
+  const box = el('textarea', { id: 'start-message', ariaLabel: 'Start session message', value: pref('startMessage', DEFAULT_START) });
+  const preview = el('p', { className: 'preview' });
+  const show = () => {
+    const full = startMessage(example), fixed = `Link this session to Jira ticket ${example.key}.`;
+    preview.replaceChildren(...(full ? [el('b', {}, fixed), full.slice(fixed.length)]
+      : ['No message. The Claude app opens an empty new session. The deck cannot link that session to the ticket until its branch or title has the ticket key, or you type /ticket ' + example.key + ' in it.']));
+  };
+  box.oninput = () => { try { localStorage.setItem('startMessage', box.value); } catch {} show(); };
+  const reset = el('button', { type: 'button', className: 'sm' }, 'Reset to default');
+  reset.onclick = () => { box.value = DEFAULT_START; box.oninput(); };
+  show();
+  return el('div', { className: 'stack', style: 'gap:8px' },
+    el('div', { className: 'tx' }, el('h3', { style: 'margin:0;font-size:14.5px' }, 'Start session message'),
+      el('p', { className: 'sub', style: 'margin:0' }, 'The first message of a session that Start session opens in the Claude app. The terminal is not affected. Clear the box to open an empty session.')),
+    box,
+    el('p', { className: 'none' }, 'Commands do not run from here. The Claude app treats this message as plain text, so /review or any other command in it has no effect. You can use {key}, {summary} and {url} for the ticket.'),
+    el('div', { className: 'lbl', style: 'justify-content:space-between' }, 'Preview', reset),
+    preview);
+}
+
 function renderSettings() {
   const theme = pref('theme', 'default'), first = pref('firstBoard', ''), reuse = pref('reuse', '1') === '1';
   const search = boardSearch('Search all Jira boards or paste a link', (b, q) => addBoard(b, q));
@@ -537,9 +576,12 @@ function renderSettings() {
           el('div', { className: 'acts', style: 'gap:8px' }, mk, rm));
       }),
       !list.length && el('p', { className: 'sub', style: 'margin:0;padding:12px 20px' }, 'No boards loaded yet. The deck shows all your tickets.')),
+    section('Pull requests',
+      srow('Pull requests to show', 'Mine shows the pull requests you opened. All shows every pull request that has the ticket key in its title, whoever opened it.', prsSeg())),
     section('Sessions',
       srow('Open sessions in', hasTerminal() ? "Used by Start session and Resume. The other one stays in each session's menu." : 'WezTerm was not found on this computer, so sessions open in the Claude app.', openInSeg()),
       srow('Default repo', 'Where Start session opens for a ticket that has no sessions yet.', defaultCwdSelect(el('select', { ariaLabel: 'Default repo', style: 'min-width:200px' }))),
+      startMessageRow(),
       srow("Reuse a ticket's last repo", 'A ticket that already has sessions starts new ones in the repo its latest session used.',
         el('div', { className: 'lbl', style: 'gap:10px;font-size:13px;color:var(--ink-2)' }, reuse ? 'On' : 'Off', sw))));
 }
@@ -601,6 +643,7 @@ async function load(fresh) {
   busy(++loads > 0);
   const want = boardId, b = board(), qs = new URLSearchParams();
   if (fresh === true) qs.set('fresh', '1');
+  if (pref('prs', 'mine') === 'all') qs.set('prs', 'all');
   if (b) { qs.set('board', b.id); if (b.qf?.length) qs.set('qf', b.qf.join(',')); }
   try {
     const d = await (await fetch('/api/deck?' + qs)).json();
@@ -618,5 +661,5 @@ async function load(fresh) {
 }
 $('refresh').onclick = () => load(true);
 window.addEventListener('hashchange', render);
-applyTheme(); render(); load(); setInterval(() => pop || document.activeElement?.matches('input') || load(), 60000);
+applyTheme(); render(); load(); setInterval(() => pop || document.activeElement?.matches('input,textarea') || load(), 60000);
 </script></body></html>

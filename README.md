@@ -112,7 +112,7 @@ Sessions started with the **Start session** button are linked automatically. In 
 ## What the page shows
 
 - **Tickets.** Jira issues assigned to you that are not done, grouped by status.
-- **Pull requests.** Your pull requests whose branch or title contains the ticket key, and pull requests created by a linked session. Each one shows the state. An open pull request also shows its reviews, its unresolved review comments, and its checks.
+- **Pull requests.** With **Pull requests** set to **Mine**, the pull requests you opened whose title or branch contains the ticket key. With **All**, every pull request with the ticket key in its title, whoever opened it, with the name of its author. The deck searches your own GitHub account and the organizations you belong to. Each pull request shows its state. An open pull request also shows its reviews, its unresolved review comments, and its checks.
 - **Sessions.** The title, branch, folder, and last activity of each session. A green dot marks a session that is running now.
 
 ## Jira boards
@@ -138,10 +138,11 @@ The deck groups tickets under their Jira epic. Each epic has a header with its t
 
 ## Controls
 
-The header has two session settings. The page remembers both.
+The header has these settings. The page remembers them.
 
 | Setting | Effect |
 |---|---|
+| **Pull requests** | **Mine** shows the pull requests you opened. **All** also shows the pull requests of other people for the same tickets. |
 | **Open in** | Where sessions open: the terminal (WezTerm) or the Claude desktop app. |
 | **Default repo** | The folder for a new session when the ticket has no earlier session. |
 
@@ -169,6 +170,7 @@ Select **Settings** in the header. Settings are saved in your browser.
 | **Jira boards** | Load, remove, and order boards. |
 | **Open sessions in** | The same setting as **Open in** in the header. |
 | **Default repo** | The same setting as in the header. |
+| **Start session message** | The first message of a session that **Start session** opens in the Claude desktop app. You can use `{key}`, `{summary}`, and `{url}` for the ticket. A command in the message does not run, because the app treats the message as plain text. If you clear the box, the app opens an empty session, and the deck cannot link that session automatically. |
 | **Reuse a ticket's last repo** | When on, a ticket that has sessions starts new ones in the folder of its latest session. |
 
 ## Without WezTerm
@@ -179,7 +181,8 @@ If the deck cannot find WezTerm, sessions open in the Claude desktop app and the
 
 - The folder list for new sessions contains only folders where you have already run Claude Code.
 - The only terminal the deck can open is WezTerm. A setting to choose your own terminal is planned. Until then, you can change the `terminal` function in `server.mjs`.
-- The deck reads at most 100 tickets and your 100 most recently updated pull requests.
+- The deck reads at most 100 tickets.
+- With **All**, the deck finds a pull request of another person only when the ticket key is in the title of the pull request.
 - The deck lists only tickets that are assigned to you and not done, also on a board.
 
 ## Security
