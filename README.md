@@ -164,7 +164,7 @@ Select **Settings** in the header. Settings are saved in your browser.
 
 | Setting | Effect |
 |---|---|
-| **Theme** | **Default**, **Cyberpunk**, **Nord**, or **Everforest**. |
+| **Theme** | **Default**, **Cyberpunk**, **Nord**, **Everforest**, **Peon**, **Night Elf**, **Alliance**, or **Undead**. |
 | **Light or dark** | For the Default theme: light, dark, or the same as your computer. |
 | **Layout** | **Table** shows one table of tickets. **Columns** shows one column for each Jira status. |
 | **Jira boards** | Load, remove, and order boards. |
