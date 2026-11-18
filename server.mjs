@@ -52,7 +52,7 @@ async function scanSessions() {
       try {
         const j = JSON.parse(await readFile(join(CLAUDE, 'sessions', f), 'utf8'));
         process.kill(j.pid, 0);
-        live.set(j.sessionId, { status: j.status ?? 'unknown', name: j.name ?? '' });
+        live.set(j.sessionId, { status: j.status ?? 'unknown', waitingFor: j.waitingFor ?? '', name: j.name ?? '' });
       } catch {}
     }
   } catch {}
@@ -132,7 +132,17 @@ async function github(fresh) {
 }
 
 const PR_FIELDS = 'number title url state isDraft reviewDecision headRefName author{login} repository{nameWithOwner} latestReviews(first:20){nodes{state}} reviewRequests{totalCount} reviewThreads(first:100){nodes{isResolved}} commits(last:1){nodes{commit{statusCheckRollup{state}}}}';
-const gql = async (query) => JSON.parse((await run('gh', ['api', 'graphql', '-f', 'query=' + query], { timeout: 40000, maxBuffer: 64e6 })).stdout).data;
+// GitHub search fails now and then for no lasting reason, so one retry; the log keeps the cause.
+const gql = async (query, retry = true) => {
+  try {
+    return JSON.parse((await run('gh', ['api', 'graphql', '-f', 'query=' + query], { timeout: 40000, maxBuffer: 64e6 })).stdout).data;
+  } catch (e) {
+    const why = String(e.stderr || e.message).slice(0, 500);
+    console.error(new Date().toISOString(), retry ? 'GitHub request failed, trying again:' : 'GitHub request failed twice:', why);
+    if (!retry || e.code === 'ENOENT' || /gh auth login|not logged in|authentication/i.test(why)) throw e;
+    return gql(query, false);
+  }
+};
 
 async function fetchPrs() {
   const d = await gql(`{viewer{login} search(query:"is:pr author:@me sort:updated-desc",type:ISSUE,first:100){nodes{... on PullRequest{${PR_FIELDS}}}}}`);

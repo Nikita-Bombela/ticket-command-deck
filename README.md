@@ -113,7 +113,7 @@ Sessions started with the **Start session** button are linked automatically. In 
 
 - **Tickets.** Jira issues assigned to you that are not done, grouped by status.
 - **Pull requests.** With **Pull requests** set to **Mine**, the pull requests you opened whose title or branch contains the ticket key. With **All**, every pull request with the ticket key in its title, whoever opened it, with the name of its author. The deck searches your own GitHub account and the organizations you belong to. Each pull request shows its state. An open pull request also shows its reviews, its unresolved review comments, and its checks.
-- **Sessions.** The title, branch, folder, and last activity of each session. A green dot marks a session that is running now.
+- **Sessions.** The title, branch, folder, and last activity of each session. A running session shows its state: **Busy** with a pulsing dot while Claude works, **Waiting** with the reason, such as a permission prompt, when Claude needs you, and **Idle** when Claude has finished its turn. Waiting sessions are listed first in a ticket. A question that Claude asks in plain text at the end of its turn shows as **Idle**.
 
 ## Jira boards
 
@@ -143,6 +143,7 @@ The header has these settings. The page remembers them.
 | Setting | Effect |
 |---|---|
 | **Pull requests** | **Mine** shows the pull requests you opened. **All** also shows the pull requests of other people for the same tickets. |
+| Copy icon next to **Pull requests** | Copies the open pull requests of your tickets in progress, one line for each: the ticket key, the ticket title, and the link. |
 | **Open in** | Where sessions open: the terminal (WezTerm) or the Claude desktop app. |
 | **Default repo** | The folder for a new session when the ticket has no earlier session. |
 
